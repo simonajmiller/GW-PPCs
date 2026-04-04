@@ -1,0 +1,105 @@
+import numpy as np
+
+run_labels = {
+    'gaussian_likelihood_sigma_0.1':r'Gaussian $\mathcal{L}$, $\sigma_{\rm meas} = 0.1$',
+    'gaussian_likelihood_sigma_0.3':r'Gaussian $\mathcal{L}$, $\sigma_{\rm meas} = 0.3$',
+    'gaussian_likelihood_sigma_0.5':r'Gaussian $\mathcal{L}$, $\sigma_{\rm meas} = 0.5$',
+    'bilby_likelihood':'Realistic O3 noise $\mathcal{L}$'
+}
+run_colors = {
+    'gaussian_likelihood_sigma_0.1':'#FF5733', 
+    'gaussian_likelihood_sigma_0.3':'#6A6BAD',
+    'gaussian_likelihood_sigma_0.5':'#0099FF',
+    'bilby_likelihood':'#A1C935',
+}
+run_colors_darker = {
+    'gaussian_likelihood_sigma_0.1':'#882E1B', 
+    'gaussian_likelihood_sigma_0.3':'#41426D',
+    'gaussian_likelihood_sigma_0.5':'#01609E',
+    'bilby_likelihood':'#5E751E',
+}
+
+
+def average_curve(pred_obs, param):    
+    all1pred = pred_obs['predicted'][f'{param}1']
+    all2pred = pred_obs['predicted'][f'{param}2']
+    allpred = np.sort(np.concatenate((all1pred, all2pred), axis=1))
+    
+    all1obs = pred_obs['observed'][f'{param}1'][0]
+    all2obs = pred_obs['observed'][f'{param}2'][0]
+    allobs = np.sort(np.concatenate((all1obs, all2obs)))
+
+    pred_avgs = np.zeros(allobs.size)
+    
+    for i in range(allobs.size):
+        x = np.median(allpred[:,i])
+        pred_avgs[i] = x
+
+    return allobs, pred_avgs
+
+def calc_slope(x, y):
+    X = np.zeros(shape=(x.size, 2))
+    X[:, 0] = x
+    X[:, 1] = np.zeros(x.size) + 1.
+    Xt = np.transpose(X)
+
+    try: 
+        Xmat = np.matmul( np.linalg.inv ( np.matmul(Xt, X) ), Xt )
+    except:
+        return np.inf, np.inf
+
+    slope, intercept = np.matmul(Xmat, y)
+
+    return slope, intercept 
+
+def fraction_underpredicted(pred_obs, params, ncut=4, nbins=50):
+    
+    slopeDict, percDict = {}, {}
+
+    for param in params: 
+        ncat, nevents = pred_obs['predicted'][param].shape
+        nxs = nevents-ncut-1
+
+        # Get slopes of PPC traces
+        slopes, xs = np.zeros((ncat, nxs)), np.zeros((ncat, nxs))
+        for n in range(ncat):
+            pred = pred_obs['predicted'][param][n]
+            obs = pred_obs['observed'][param][n]
+
+            pred_noendpoints = pred[int(ncut/2):-int(ncut/2)]
+            xs[n,:] = np.array([0.5*(pred_noendpoints[i] + pred_noendpoints[i+1]) for i in range(len(pred_noendpoints)-1)])
+            for i in range(nxs):
+                slopes[n,i] = calc_slope(pred[i:i+ncut], obs[i:i+ncut])[0]
+
+        slopeDict[param] = { 'slope_all': slopes , 'xs' : xs,}
+                
+        # Bin the x-axis and calculate fraction > 1 for slopes in each bin
+        xarr = np.concatenate(xs)
+        xmin = np.min(xarr)
+        xmax = np.max(xarr)
+        xbins = np.linspace(xmin, xmax, nbins)
+        dx = xbins[1] - xbins[0]
+        midpoints = xbins[:-1] + dx
+
+        percs, Ns = [], []
+        for k in range(len(midpoints)):
+            low = xbins[k]
+            high = xbins[k+1]
+
+            inbound = (xs >= low) & (xs <= high)
+            xin = xs[inbound]
+            slopein = slopes[inbound]
+
+            n =  len(slopein)
+            p = sum(slopein < 1) / n 
+                        
+            percs.append(p)
+            Ns.append(n)
+            
+        percDict[param] = {
+            'xs' : midpoints, 
+            'fraction' : np.array(percs), 
+            'N' : np.array(Ns)
+        }  
+
+    return slopeDict, percDict

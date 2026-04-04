@@ -4,3 +4,7 @@ font.serif : Computer Modern Roman
 font.monospace : Computer Modern Typewriter
 text.usetex : True
 legend.frameon : True
+grid.color : silver
+grid.linewidth : 0.5
+grid.alpha : 0.7
+grid.linestyle : :
