@@ -1,2 +1,4 @@
 **.ipynb_checkpoints**
 **__pycache__**
+data/true_underlying_population_det_draws.json
+data/true_underlying_population_inj_draws.json
