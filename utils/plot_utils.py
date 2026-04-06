@@ -12,6 +12,12 @@ run_labels_full = {
     'gaussian_likelihood_sigma_0.5':r'Gaussian likelihood, $\sigma_{\rm meas} = 0.5$',
     'bilby_likelihood':'Realistic O3 noise likelihood'
 }
+run_labels_short = {
+    'gaussian_likelihood_sigma_0.1':r'$\sigma_{\rm meas} = 0.1$',
+    'gaussian_likelihood_sigma_0.3':r'$\sigma_{\rm meas} = 0.3$',
+    'gaussian_likelihood_sigma_0.5':r'$\sigma_{\rm meas} = 0.5$',
+    'bilby_likelihood':'Realistic O3 noise'
+}
 run_colors = {
     'gaussian_likelihood_sigma_0.1':'#FF5733', 
     'gaussian_likelihood_sigma_0.3':'#6A6BAD',
@@ -27,21 +33,14 @@ run_colors_darker = {
 
 
 def average_curve(pred_obs, param):    
-    all1pred = pred_obs['predicted'][f'{param}1']
-    all2pred = pred_obs['predicted'][f'{param}2']
-    allpred = np.sort(np.concatenate((all1pred, all2pred), axis=1))
-    
-    all1obs = pred_obs['observed'][f'{param}1'][0]
-    all2obs = pred_obs['observed'][f'{param}2'][0]
-    allobs = np.sort(np.concatenate((all1obs, all2obs)))
 
-    pred_avgs = np.zeros(allobs.size)
-    
-    for i in range(allobs.size):
-        x = np.median(allpred[:,i])
-        pred_avgs[i] = x
+    allpred = np.sort(pred_obs['predicted'][param])
+    allobs = np.sort(pred_obs['observed'][param])
 
-    return allobs, pred_avgs
+    pred_avgs = np.average(allpred, axis=0)
+    obs_avgs = np.average(allobs, axis=0)
+
+    return obs_avgs, pred_avgs
 
 def calc_slope(x, y):
     X = np.zeros(shape=(x.size, 2))
@@ -96,7 +95,7 @@ def fraction_underpredicted(pred_obs, params, ncut=4, nbins=50):
             xin = xs[inbound]
             slopein = slopes[inbound]
 
-            n =  len(slopein)
+            n = len(slopein)
             p = sum(slopein < 1) / n 
                         
             percs.append(p)
