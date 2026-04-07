@@ -128,7 +128,10 @@ def fraction_underpredicted(pred_obs, params, ncut=4, nbins=50):
             slopein = slopes[inbound]
 
             n = len(slopein)
-            p = sum(slopein < 1) / n 
+            if n==0:
+                p = np.nan
+            else:
+                p = sum(slopein < 1) / n 
                         
             percs.append(p)
             Ns.append(n)
